@@ -12,7 +12,7 @@ public class StudentPlayerRandomFit extends PylosPlayer {
 
     @Override
     public void doMove(PylosGameIF game, PylosBoard board) {
-        int randomIndex = getRandom().nextInt(1);
+        int randomIndex = getRandom().nextInt(2);
         if (randomIndex == 0 && doLevelUp(game, board)) return;
         else doMoveReserveSphere(game, board);
 
@@ -73,8 +73,13 @@ public class StudentPlayerRandomFit extends PylosPlayer {
             }
         }
         Collections.shuffle(removableSpheres);
-        PylosSphere sphereToRemove = removableSpheres.get(0);
-        game.removeSphere(sphereToRemove);
+        PylosSphere sphereToRemove;
+        if (!removableSpheres.isEmpty()){
+            sphereToRemove = removableSpheres.get(0);
+            game.removeSphere(sphereToRemove);
+        } else {
+            game.pass();
+        }
     }
 
     @Override
