@@ -1,15 +1,9 @@
 package be.kuleuven.pylos.player.student;
 
-import be.kuleuven.pylos.game.PylosBoard;
-import be.kuleuven.pylos.game.PylosGameIF;
-import be.kuleuven.pylos.game.PylosLocation;
-import be.kuleuven.pylos.game.PylosSphere;
+import be.kuleuven.pylos.game.*;
 import be.kuleuven.pylos.player.PylosPlayer;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Random;
+import java.util.*;
 
 /**
  * Created by Ine on 5/05/2015.
@@ -18,13 +12,13 @@ public class StudentPlayerRandomFit extends PylosPlayer {
 
     @Override
     public void doMove(PylosGameIF game, PylosBoard board) {
-        /* add a reserve sphere to a feasible random location */
-        ArrayList<PylosLocation> allPossibleLocations = new ArrayList<>();
-        for (PylosLocation bl : board.getLocations()) {
-            if (bl.isUsable()) {
-                allPossibleLocations.add(bl);
-            }
-        }
+        int randomIndex = getRandom().nextInt(1);
+        if (randomIndex == 0 && doLevelUp(game, board)) return;
+        else doMoveReserveSphere(game, board);
+
+    }
+
+    private boolean doLevelUp(PylosGameIF game, PylosBoard board) {
         ArrayList<PylosSphere> removableSpheres = new ArrayList<>();
         for (PylosSphere ps : board.getSpheres(this)) {
             if (!ps.isReserve() && !ps.getLocation().hasAbove()) {
@@ -35,15 +29,39 @@ public class StudentPlayerRandomFit extends PylosPlayer {
         PylosSphere boardSphere = null;
         if (!removableSpheres.isEmpty()) {
             boardSphere = removableSpheres.get(0);
+        } else return false;
+        PylosLocation oldLocation = boardSphere.getLocation();
+        int z = boardSphere.getLocation().Z;
+        ArrayList<PylosLocation> allPossibleTopLocations = new ArrayList<>();
+        for (PylosLocation bl : board.getLocations()) {
+            if (bl.isUsable() && !bl.hasAbove() && bl.Z > z) {
+                allPossibleTopLocations.add(bl);
+            }
+        }
+
+        List<PylosSquare> squares = oldLocation.getSquares();
+        for (PylosSquare ps : squares) allPossibleTopLocations.remove(ps.getTopLocation());
+        if (allPossibleTopLocations.isEmpty()) {
+            return false;
+        }
+        Collections.shuffle(allPossibleTopLocations);
+        game.moveSphere(boardSphere, allPossibleTopLocations.get(0));
+        return true;
+    }
+
+    private void doMoveReserveSphere(PylosGameIF game, PylosBoard board) {
+        /* add a reserve sphere to a feasible random location */
+        ArrayList<PylosLocation> allPossibleLocations = new ArrayList<>();
+        for (PylosLocation bl : board.getLocations()) {
+            if (bl.isUsable()) {
+                allPossibleLocations.add(bl);
+            }
         }
         PylosSphere reserveSphere = board.getReserve(this);
-        PylosSphere result;
-        int randomIndex = getRandom().nextInt(1);
-        if (randomIndex == 0 && boardSphere != null) result = boardSphere;
-        else result = reserveSphere;
-        PylosLocation location = allPossibleLocations.get(getRandom().nextInt(allPossibleLocations.size() - 1));
-        game.moveSphere(result, location);
+        PylosLocation location = allPossibleLocations.size() == 1 ? allPossibleLocations.get(0) : allPossibleLocations.get(getRandom().nextInt(allPossibleLocations.size() - 1));
+        game.moveSphere(reserveSphere, location);
     }
+
 
     @Override
     public void doRemove(PylosGameIF game, PylosBoard board) {
