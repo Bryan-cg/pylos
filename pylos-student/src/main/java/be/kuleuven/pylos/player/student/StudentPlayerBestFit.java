@@ -17,6 +17,10 @@ import java.util.List;
 // Strategy remove:
 // Remove second sphere only when it doesn't give opponent opportunity to make square of if it doesn't break our opportunity to create square \done
 
+// TODO: Better performance when we try to add new spheres to middle of board?
+// TODO: Scoring function to calculate how good move is?
+// TODO: Other ideas...
+
 public class StudentPlayerBestFit extends PylosPlayer {
     private PylosGameIF currentGame;
     private PylosBoard currentBoard;
