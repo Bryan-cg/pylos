@@ -17,9 +17,14 @@ import java.util.List;
 //
 
 public class StudentPlayerBestFit extends PylosPlayer {
+    private PylosGameIF currentGame;
+    private PylosBoard currentBoard;
 
     @Override
     public void doMove(PylosGameIF game, PylosBoard board) {
+        // Update current game & board
+        currentGame = game;
+        currentBoard = board;
 
         // Get all usable locations
         final List<PylosLocation> allPossibleLocations = new ArrayList<>();
@@ -28,23 +33,11 @@ public class StudentPlayerBestFit extends PylosPlayer {
                 allPossibleLocations.add(bl);
             }
         }
-        // Collections.shuffle(allPossibleLocations);
-
+        Collections.shuffle(allPossibleLocations);
         // Make square own colours if possible
-        final PylosLocation fullSquareLocation = getSquareLocation(allPossibleLocations);
-        if (fullSquareLocation != null) {
-            // Try to move sphere that is already on board
-            PylosSphere sphere = null;
-            for (PylosSphere ps : board.getSpheres(this)) {
-                if (!ps.isReserve() && ps.canMoveTo(fullSquareLocation))
-                    sphere = ps;
-            }
-            // Use reserve sphere
-            if (sphere == null)
-                sphere = board.getReserve(this);
-            game.moveSphere(sphere, fullSquareLocation);
-            return;
-        }
+        if (makeSquare(this, allPossibleLocations)) return;
+        // Block square opponent
+        else if (makeSquare(this.OTHER, allPossibleLocations)) return;
 
         //else random move temporary
         PylosSphere reserveSphere = board.getReserve(this);
@@ -53,13 +46,33 @@ public class StudentPlayerBestFit extends PylosPlayer {
     }
 
     /**
+     * @param player
      * @param allPossibleLocations
-     * @return first location that forms square own colour
+     * @return successfully made/blocked square or not
      */
-    private PylosLocation getSquareLocation(List<PylosLocation> allPossibleLocations) {
+    private boolean makeSquare(PylosPlayer player, List<PylosLocation> allPossibleLocations) {
+        final PylosLocation fullSquareLocation = getSquareLocation(allPossibleLocations, player);
+        if (fullSquareLocation != null) {
+            // Try to move sphere that is already on board
+            PylosSphere sphere = getMovableSphereToLocation(fullSquareLocation);
+            // Use reserve sphere
+            if (sphere == null)
+                sphere = currentBoard.getReserve(this);
+            currentGame.moveSphere(sphere, fullSquareLocation);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @param allPossibleLocations
+     * @param player
+     * @return first location that forms square player colour
+     */
+    private PylosLocation getSquareLocation(List<PylosLocation> allPossibleLocations, PylosPlayer player) {
         for (PylosLocation pylosLocation : allPossibleLocations) {
             for (PylosSquare pylosSquare : pylosLocation.getSquares()) {
-                if (pylosSquare.getInSquare(this) == 3) {
+                if (pylosSquare.getInSquare(player) == 3) {
                     return pylosLocation;
                 }
             }
@@ -67,8 +80,24 @@ public class StudentPlayerBestFit extends PylosPlayer {
         return null;
     }
 
+    /**
+     * @param fullSquareLocation
+     * @return sphere on board that can be moved to location or null
+     */
+    private PylosSphere getMovableSphereToLocation(PylosLocation fullSquareLocation) {
+        for (PylosSphere ps : currentBoard.getSpheres(this)) {
+            if (!ps.isReserve() && ps.canMoveTo(fullSquareLocation))
+                return ps;
+        }
+        return null;
+    }
+
     @Override
     public void doRemove(PylosGameIF game, PylosBoard board) {
+        // Update current game & board
+        currentGame = game;
+        currentBoard = board;
+
         // removeSphere a random sphere - temporary solution
         List<PylosSphere> removableSpheres = new ArrayList<>();
         for (PylosSphere ps : board.getSpheres(this)) {
