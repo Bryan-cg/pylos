@@ -17,6 +17,8 @@ import java.util.List;
 // Strategy remove:
 // Remove second sphere only when it doesn't give opponent opportunity to make square of if it doesn't break our opportunity to create square \done
 
+// TODO: in plaats van gewoon reserve sphere op random locatie, reserve sphere plaatsen in square waar nog geen spheres zijn indien mogelijk (else random)
+
 public class StudentPlayerBestFit extends PylosPlayer {
     private PylosGameIF currentGame;
     private PylosBoard currentBoard;
@@ -87,6 +89,11 @@ public class StudentPlayerBestFit extends PylosPlayer {
         return true;
     }
 
+    /**
+     * Place reserve sphere at random location
+     *
+     * @param allPossibleLocations
+     */
     private void placeReserveSphere(List<PylosLocation> allPossibleLocations) {
         PylosSphere reserveSphere = currentBoard.getReserve(this);
         PylosLocation location = allPossibleLocations.size() == 1 ? allPossibleLocations.get(0) : allPossibleLocations.get(getRandom().nextInt(allPossibleLocations.size() - 1));
