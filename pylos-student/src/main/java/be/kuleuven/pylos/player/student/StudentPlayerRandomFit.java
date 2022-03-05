@@ -15,7 +15,6 @@ public class StudentPlayerRandomFit extends PylosPlayer {
         int randomIndex = getRandom().nextInt(2);
         if (randomIndex == 0 && doLevelUp(game, board)) return;
         else doMoveReserveSphere(game, board);
-
     }
 
     private boolean doLevelUp(PylosGameIF game, PylosBoard board) {
