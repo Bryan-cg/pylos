@@ -4,17 +4,18 @@ import be.kuleuven.pylos.game.*;
 import be.kuleuven.pylos.player.PylosPlayer;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 // Strategy move:
-// try to place sphere to make square with own colours
-// block square with all colours opponent
-
+// try to place sphere to make square with own colours \done
+// block square with all colours opponent \done
+// Move sphere level up only when doesn't give opponent opportunity to make square \done
+// Place reserve sphere on board \done
 
 // Strategy remove:
-//
+// Remove second sphere only when it doesn't give opponent opportunity to make square of if it doesn't break our opportunity to create square \done
 
 public class StudentPlayerBestFit extends PylosPlayer {
     private PylosGameIF currentGame;
@@ -26,23 +27,12 @@ public class StudentPlayerBestFit extends PylosPlayer {
         currentGame = game;
         currentBoard = board;
 
-        // Get all usable locations
-        final List<PylosLocation> allPossibleLocations = new ArrayList<>();
-        for (PylosLocation bl : board.getLocations()) {
-            if (bl.isUsable()) {
-                allPossibleLocations.add(bl);
-            }
-        }
+        final List<PylosLocation> allPossibleLocations = getAllPossibleLocations();
         Collections.shuffle(allPossibleLocations);
-        // Make square own colours if possible
         if (makeSquare(this, allPossibleLocations)) return;
-        // Block square opponent
         else if (makeSquare(this.OTHER, allPossibleLocations)) return;
-
-        //else random move temporary
-        PylosSphere reserveSphere = board.getReserve(this);
-        PylosLocation location = allPossibleLocations.size() == 1 ? allPossibleLocations.get(0) : allPossibleLocations.get(getRandom().nextInt(allPossibleLocations.size() - 1));
-        game.moveSphere(reserveSphere, location);
+        else if (doLevelUp(allPossibleLocations)) return;
+        else placeReserveSphere(allPossibleLocations);
     }
 
     /**
@@ -65,6 +55,45 @@ public class StudentPlayerBestFit extends PylosPlayer {
     }
 
     /**
+     * Only move up when doesn't give opportunity to opponent for square
+     *
+     * @return successfully moved sphere to higher level
+     */
+    private boolean doLevelUp(List<PylosLocation> allPossibleLocations) {
+        final List<PylosLocation> opportunityLocations = new ArrayList<>();
+        for (PylosSquare psq : currentBoard.getAllSquares()) {
+            if (psq.getInSquare(this.OTHER) != 3) {
+                opportunityLocations.addAll(Arrays.asList(psq.getLocations()));
+            } else {
+                opportunityLocations.removeAll(Arrays.asList(psq.getLocations()));
+            }
+        }
+        PylosSphere moveUpSphere = null;
+        PylosLocation moveToLocation = null;
+        for (PylosSphere sphere : currentBoard.getSpheres(this)) {
+            if (!opportunityLocations.contains(sphere.getLocation())) {
+                for (PylosLocation location : allPossibleLocations) {
+                    moveUpSphere = getMovableSphereToLocation(location);
+                    if (moveUpSphere != null) {
+                        moveToLocation = location;
+                        break;
+                    }
+                }
+                if (moveUpSphere != null) break;
+            }
+        }
+        if (moveUpSphere == null) return false;
+        currentGame.moveSphere(moveUpSphere, moveToLocation);
+        return true;
+    }
+
+    private void placeReserveSphere(List<PylosLocation> allPossibleLocations) {
+        PylosSphere reserveSphere = currentBoard.getReserve(this);
+        PylosLocation location = allPossibleLocations.size() == 1 ? allPossibleLocations.get(0) : allPossibleLocations.get(getRandom().nextInt(allPossibleLocations.size() - 1));
+        currentGame.moveSphere(reserveSphere, location);
+    }
+
+    /**
      * @param allPossibleLocations
      * @param player
      * @return first location that forms square player colour
@@ -81,12 +110,12 @@ public class StudentPlayerBestFit extends PylosPlayer {
     }
 
     /**
-     * @param fullSquareLocation
+     * @param location
      * @return sphere on board that can be moved to location or null
      */
-    private PylosSphere getMovableSphereToLocation(PylosLocation fullSquareLocation) {
+    private PylosSphere getMovableSphereToLocation(PylosLocation location) {
         for (PylosSphere ps : currentBoard.getSpheres(this)) {
-            if (!ps.isReserve() && ps.canMoveTo(fullSquareLocation))
+            if (!ps.isReserve() && ps.canMoveTo(location))
                 return ps;
         }
         return null;
@@ -97,27 +126,67 @@ public class StudentPlayerBestFit extends PylosPlayer {
         // Update current game & board
         currentGame = game;
         currentBoard = board;
-
-        // removeSphere a random sphere - temporary solution
-        List<PylosSphere> removableSpheres = new ArrayList<>();
-        for (PylosSphere ps : board.getSpheres(this)) {
-            if (!ps.isReserve() && !ps.getLocation().hasAbove()) {
-                removableSpheres.add(ps);
-            }
-        }
+        final List<PylosSphere> removableSpheres = getRemovableSpheres();
         Collections.shuffle(removableSpheres);
         PylosSphere sphereToRemove;
-        if (!removableSpheres.isEmpty()) {
+        if (removableSpheres.size() == 1) {
             sphereToRemove = removableSpheres.get(0);
-            game.removeSphere(sphereToRemove);
         } else {
-            game.pass();
+            sphereToRemove = getOptimalRemovableSphere(removableSpheres);
+            if (sphereToRemove == null) {
+                // temporary solution - remove random sphere
+                sphereToRemove = removableSpheres.get(0);
+            }
         }
+        game.removeSphere(sphereToRemove);
     }
 
     @Override
     public void doRemoveOrPass(PylosGameIF game, PylosBoard board) {
-        //temporary solution
-        doRemove(game, board);
+        // Update current game & board
+        currentGame = game;
+        currentBoard = board;
+        final List<PylosSphere> removableSpheres = getRemovableSpheres();
+        PylosSphere sphere = getOptimalRemovableSphere(removableSpheres);
+        if (sphere == null) {
+            currentGame.pass();
+        } else currentGame.removeSphere(sphere);
+    }
+
+    /**
+     * @param removableSpheres
+     * @return sphere that doesn't give opponent opportunity to make square and doesn't break our opportunity to create square
+     */
+    private PylosSphere getOptimalRemovableSphere(List<PylosSphere> removableSpheres) {
+        for (PylosSphere ps : removableSpheres) {
+            for (PylosSquare pylosSquare : ps.getLocation().getSquares()) {
+                final int ownSpheres = pylosSquare.getInSquare(this);
+                final int opponentSpheres = pylosSquare.getInSquare(this.OTHER);
+                if (opponentSpheres != 3 && ownSpheres != 3) {
+                    return ps;
+                }
+            }
+        }
+        return null;
+    }
+
+    private List<PylosSphere> getRemovableSpheres() {
+        final List<PylosSphere> removableSpheres = new ArrayList<>();
+        for (PylosSphere ps : currentBoard.getSpheres(this)) {
+            if (!ps.isReserve() && !ps.getLocation().hasAbove()) {
+                removableSpheres.add(ps);
+            }
+        }
+        return removableSpheres;
+    }
+
+    private List<PylosLocation> getAllPossibleLocations() {
+        final List<PylosLocation> allPossibleLocations = new ArrayList<>();
+        for (PylosLocation bl : currentBoard.getLocations()) {
+            if (bl.isUsable()) {
+                allPossibleLocations.add(bl);
+            }
+        }
+        return allPossibleLocations;
     }
 }
