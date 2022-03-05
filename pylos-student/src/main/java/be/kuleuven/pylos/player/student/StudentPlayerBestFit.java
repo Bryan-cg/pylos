@@ -17,8 +17,6 @@ import java.util.List;
 // Strategy remove:
 // Remove second sphere only when it doesn't give opponent opportunity to make square of if it doesn't break our opportunity to create square \done
 
-// TODO: in plaats van gewoon reserve sphere op random locatie, reserve sphere plaatsen in square waar nog geen spheres zijn indien mogelijk (else random)
-
 public class StudentPlayerBestFit extends PylosPlayer {
     private PylosGameIF currentGame;
     private PylosBoard currentBoard;
@@ -90,12 +88,28 @@ public class StudentPlayerBestFit extends PylosPlayer {
     }
 
     /**
-     * Place reserve sphere at random location
+     * Place reserve sphere at square without spheres or random location
      *
      * @param allPossibleLocations
      */
     private void placeReserveSphere(List<PylosLocation> allPossibleLocations) {
         PylosSphere reserveSphere = currentBoard.getReserve(this);
+
+        // doesn't increase score
+        /*
+        for (PylosSquare psq : currentBoard.getAllSquares()) {
+            if (psq.getInSquare(this) == 1 && psq.getInSquare(this.OTHER) == 0 && psq.getLocations()[0].Z == 0) {
+                int i = getRandom().nextInt(4);
+                while (!psq.getLocations()[i].isUsable()) {
+                    i = getRandom().nextInt(4);
+                }
+                currentGame.moveSphere(reserveSphere, psq.getLocations()[i]);
+                return;
+            }
+        }
+         */
+
+        // Place reserve sphere at random location
         PylosLocation location = allPossibleLocations.size() == 1 ? allPossibleLocations.get(0) : allPossibleLocations.get(getRandom().nextInt(allPossibleLocations.size() - 1));
         currentGame.moveSphere(reserveSphere, location);
     }
@@ -103,7 +117,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
     /**
      * @param allPossibleLocations
      * @param player
-     * @return first location that forms square player colour
+     * @return Location that allows player to form square
      */
     private PylosLocation getSquareLocation(List<PylosLocation> allPossibleLocations, PylosPlayer player) {
         for (PylosLocation pylosLocation : allPossibleLocations) {
