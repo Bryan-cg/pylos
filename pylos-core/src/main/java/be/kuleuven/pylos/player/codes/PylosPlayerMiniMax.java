@@ -37,7 +37,7 @@ public class PylosPlayerMiniMax extends PylosPlayer {
 	private boolean PRUNE_ENABLE = true;
 	private final boolean VAR_BRANCH_DEPTH;
 	private final int VAR_BRANCH_START_DEPTH;       // set to 7 for best fit, 11 for human
-	private int MAX_BRANCH_DEPTH = 4;                    // set to 5 for human, set to 3 for best fit, 10 is possible
+	private int MAX_BRANCH_DEPTH = 4;               // set to 5 for human, set to 3 for best fit, 10 is possible
 
 	private final boolean USE_RANDOM = true;
 	private final boolean SAVE_STATES = true;
