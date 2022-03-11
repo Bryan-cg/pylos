@@ -56,11 +56,11 @@ public class StudentPlayerBestFit extends PylosPlayer {
     else placeReserveSphere(allPossibleLocations);
   }
 
-  public int miniMax(int depth, int currentScore, boolean maximizingPlayer) {
-    int bestScore = (maximizingPlayer) ? -9999 : 9999;
+  public double miniMax(int depth, boolean maximizingPlayer) {
+    double bestScore = (maximizingPlayer) ? -9999 : 9999;
     PylosPlayer player = (maximizingPlayer) ? this : OTHER;
-    PylosSphere bestSphere;
-    PylosLocation bestLocation;
+
+    if(depth == 0) return eval();
 
     // TODO: don't move spheres guarding opponent square
     List<PylosSphere> movableSpheres = getRemovableSpheres(player);
@@ -68,6 +68,11 @@ public class StudentPlayerBestFit extends PylosPlayer {
     for(PylosSphere sphere : movableSpheres){
       for(PylosLocation location : getPossibleLocations(sphere)){
         // Check if this move has better cost & save move if so
+        simulator.moveSphere(sphere, location);
+        bestScore = maximizingPlayer
+            ? Math.max(bestScore, miniMax(depth-1, false))
+            : Math.min(bestScore, miniMax(depth-1, true));
+        //TODO: remove sphere
       }
     }
 
