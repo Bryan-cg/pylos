@@ -17,25 +17,17 @@ import java.util.List;
 // Strategy remove:
 // Remove second sphere only when it doesn't give opponent opportunity to make square of if it doesn't break our opportunity to create square \done
 
+// Ideas for a scoring function:
+// - My reserve spheres - your reserve spheres \done
+// - My movable spheres - your movable spheres (maximize nr. of lvl up moves)
+// - Only finish square when opp. will block otherwise or when you can remove 2 spheres
+
 // TODO: Better performance when we try to add new spheres to middle of board?
 // TODO: Scoring function to calculate how good move is?
 // TODO: Ranking function for moves with equal score (number of spheres in square, possibility
 //  for lvl up, ...)
 // TODO: Other ideas...
 
-// TODO: recursive minMax (idea of structure below)
-//recSim(lvl){
-//    score = 0;
-//    if(lvl == 0) score += calcScore();
-//    else{
-//        for(all moves){
-//            simulator.doMove()
-//            score += recSim(lvl-1)
-//            simulator.undoMove();
-//        }
-//    }
-//    return score;
-//}
 
 public class StudentPlayerBestFit extends PylosPlayer {
   private PylosGameIF currentGame;
@@ -48,35 +40,89 @@ public class StudentPlayerBestFit extends PylosPlayer {
     currentGame = game;
     currentBoard = board;
 
-    final List<PylosLocation> allPossibleLocations = getAllPossibleLocations();
-    Collections.shuffle(allPossibleLocations);
-    if (makeSquare(this, allPossibleLocations)) return;
-    else if (makeSquare(this.OTHER, allPossibleLocations)) return;
-    else if (doLevelUp(allPossibleLocations)) return;
-    else placeReserveSphere(allPossibleLocations);
+    miniMax(1);
+
+//    final List<PylosLocation> allPossibleLocations = getAllPossibleLocations();
+//    Collections.shuffle(allPossibleLocations);
+//    if (makeSquare(this, allPossibleLocations)) return;
+//    else if (makeSquare(this.OTHER, allPossibleLocations)) return;
+//    else if (doLevelUp(allPossibleLocations)) return;
+//    else placeReserveSphere(allPossibleLocations);
   }
 
-  public double miniMax(int depth, boolean maximizingPlayer) {
-    double bestScore = (maximizingPlayer) ? -9999 : 9999;
-    PylosPlayer player = (maximizingPlayer) ? this : OTHER;
+  // First call to miniMax, this method will save the best found move
+  public void miniMax(int depth) {
+    simulator = new PylosGameSimulator(currentGame.getState(), PLAYER_COLOR, currentBoard);
+    PylosGameState prevState = simulator.getState();
+    PylosPlayerColor prevColor = OTHER.PLAYER_COLOR;
+    double bestScore = -99999;
+    PylosSphere bestSphere = currentBoard.getReserve(this);
+    PylosLocation bestLocation = null;
 
-    if(depth == 0) return eval();
+    // First try a reserve sphere
+    for (PylosLocation location : getAllPossibleLocations()) {
+      simulator.moveSphere(bestSphere, location);
+      double score = miniMaxRec(depth - 1, false);
+      if (score > bestScore) {
+        bestScore = score;
+        bestLocation = location;
+      }
+      simulator.undoAddSphere(bestSphere, prevState, prevColor);
+    }
 
-    // TODO: don't move spheres guarding opponent square
-    List<PylosSphere> movableSpheres = getRemovableSpheres(player);
-    movableSpheres.add(currentBoard.getReserve(player));
-    for(PylosSphere sphere : movableSpheres){
-      for(PylosLocation location : getPossibleLocations(sphere)){
-        // Check if this move has better cost & save move if so
+    // Try moving a sphere already on the board
+    List<PylosSphere> movableSpheres = getRemovableSpheres(this);
+    for (PylosSphere sphere : movableSpheres) {
+      PylosLocation prevLocation = sphere.getLocation();
+      for (PylosLocation location : getPossibleLocations(sphere)) {
         simulator.moveSphere(sphere, location);
-        bestScore = maximizingPlayer
-            ? Math.max(bestScore, miniMax(depth-1, false))
-            : Math.min(bestScore, miniMax(depth-1, true));
-        //TODO: remove sphere
+        double score = miniMaxRec(depth - 1, false);
+        if (score > bestScore) {
+          bestScore = score;
+          bestLocation = location;
+          bestSphere = sphere;
+        }
+        simulator.undoMoveSphere(sphere, prevLocation, prevState, prevColor);
       }
     }
 
-    return 0;
+    currentGame.moveSphere(bestSphere, bestLocation);
+  }
+
+  public double miniMaxRec(int depth, boolean maximizingPlayer) {
+    if (depth == 0) return eval();
+
+    double bestScore = (maximizingPlayer) ? -9999 : 9999;
+    PylosPlayer player = (maximizingPlayer) ? this : OTHER;
+    PylosGameState prevState = simulator.getState();
+    PylosPlayerColor prevColor = player.OTHER.PLAYER_COLOR;
+
+    List<PylosSphere> movableSpheres = getRemovableSpheres(player);
+    for (PylosSphere sphere : movableSpheres) {
+      for (PylosLocation location : getPossibleLocations(sphere)) {
+        PylosLocation prevLocation = sphere.getLocation();
+        simulator.moveSphere(sphere, location);
+        double nextScore = miniMaxRec(depth - 1, !maximizingPlayer);
+        if (maximizingPlayer && nextScore > bestScore ||
+            !maximizingPlayer && nextScore < bestScore) {
+          bestScore = nextScore;
+        }
+        simulator.undoMoveSphere(sphere, prevLocation, prevState, prevColor);
+      }
+    }
+
+    PylosSphere reserveSphere = currentBoard.getReserve(player);
+    for (PylosLocation location : getAllPossibleLocations()) {
+      simulator.moveSphere(reserveSphere, location);
+      double nextScore = miniMaxRec(depth - 1, !maximizingPlayer);
+      if (maximizingPlayer && nextScore > bestScore ||
+          !maximizingPlayer && nextScore < bestScore) {
+        bestScore = nextScore;
+      }
+      simulator.undoAddSphere(reserveSphere, prevState, prevColor);
+    }
+
+    return bestScore;
   }
 
   // Returns list of locations where sphere can be placed
