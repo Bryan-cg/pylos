@@ -99,6 +99,10 @@ public class StudentPlayerBestFit extends PylosPlayer {
             case REMOVE_SECOND:
                 score = doRemoveOrPassSim();
                 break;
+            case COMPLETED:
+            case DRAW:
+                score = eval();
+                break;
             default:
                 throw new IllegalStateException("Game state is: " + prevState);
         }
@@ -297,6 +301,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
     public void doRemove(PylosGameIF game, PylosBoard board) {
         currentGame = game;
         currentBoard = board;
+        simulator = new PylosGameSimulator(currentGame.getState(), PLAYER_COLOR, currentBoard);
         final List<PylosSphere> removableSpheres = getRemovableSpheres(this);
         double bestScore = -9999;
         PylosSphere bestSphereToRemove = null;
@@ -336,8 +341,9 @@ public class StudentPlayerBestFit extends PylosPlayer {
     public void doRemoveOrPass(PylosGameIF game, PylosBoard board) {
         currentGame = game;
         currentBoard = board;
+        simulator = new PylosGameSimulator(currentGame.getState(), PLAYER_COLOR, currentBoard);
         final List<PylosSphere> removableSpheres = getRemovableSpheres(this);
-        double bestScoreRemove =  -9999;
+        double bestScoreRemove = -9999;
         PylosSphere bestSphereToRemove = null;
         for (PylosSphere sphereToRemove : removableSpheres) {
             PylosLocation prevLocation = sphereToRemove.getLocation();
