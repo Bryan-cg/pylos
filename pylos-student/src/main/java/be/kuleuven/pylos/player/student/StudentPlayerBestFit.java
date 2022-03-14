@@ -164,7 +164,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
         return false;
     }
 
-    // Emphasizes preserving the spheres of our player
+    // Emphasizes preserving the spheres of our player and making full squares of our spheres
     private double eval() {
         double reserveScore = (-30 * (NUMBER_OF_SPHERES - currentBoard.getReservesSize(this))) + (10 * (NUMBER_OF_SPHERES - currentBoard.getReservesSize(this.OTHER)));
         double moveScore = 0;
