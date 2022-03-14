@@ -23,12 +23,10 @@ import java.util.List;
 // - My movable spheres - your movable spheres (maximize nr. of lvl up moves)
 // - Only finish square when opp. will block otherwise or when you can remove 2 spheres
 
-// TODO: Better performance when we try to add new spheres to middle of board?
-// TODO: Scoring function to calculate how good move is?
 // TODO: Ranking function for moves with equal score (number of spheres in square, possibility
 //  for lvl up, ...)
 // TODO: Other ideas...
-// TODO: Implement removeSphere & pass in minimax
+// TODO: Implement removeSphere & pass in minimax \done
 // TODO: When you remove the 4th sphere of your own square and make the square again, you con
 //  remove 2 spheres again
 
@@ -44,15 +42,12 @@ public class StudentPlayerBestFit extends PylosPlayer {
     public void doMove(PylosGameIF game, PylosBoard board) {
         currentGame = game;
         currentBoard = board;
-
+        final List<PylosLocation> allPossibleLocations = getAllPossibleLocations();
+        Collections.shuffle(allPossibleLocations);
+        if (makeSquare(this, allPossibleLocations)) return;
+        else if (makeSquare(this.OTHER, allPossibleLocations)) return;
+        else if (doLevelUp(allPossibleLocations)) return;
         miniMax();
-
-//    final List<PylosLocation> allPossibleLocations = getAllPossibleLocations();
-//    Collections.shuffle(allPossibleLocations);
-//    if (makeSquare(this, allPossibleLocations)) return;
-//    else if (makeSquare(this.OTHER, allPossibleLocations)) return;
-//    else if (doLevelUp(allPossibleLocations)) return;
-//    else placeReserveSphere(allPossibleLocations);
     }
 
     // First call to miniMax, this method will save the best found move
@@ -224,12 +219,13 @@ public class StudentPlayerBestFit extends PylosPlayer {
         currentGame.moveSphere(reserveSphere, bestLocation);
     }
 
+    // Emphasizes preserving the spheres of our player
     private double eval() {
-        double reserveScore = currentBoard.getReservesSize(this) - currentBoard.getReservesSize(this.OTHER);
+        double reserveScore = (-30 * (15 - currentBoard.getReservesSize(this))) + (10 * (15 - currentBoard.getReservesSize(this.OTHER)));
         double moveScore = 0;
-        List<PylosLocation> reserveSpheres = getAllPossibleLocations();
-        moveScore += getMakeSquaresSimulator(this.OTHER, reserveSpheres);
-        moveScore += doLevelUpSimulator(reserveSpheres);
+        List<PylosLocation> allPossibleLocations = getAllPossibleLocations();
+        moveScore += getMakeSquaresSimulator(this, allPossibleLocations);
+        moveScore += doLevelUpSimulator(allPossibleLocations);
         return reserveScore + moveScore;
     }
 
