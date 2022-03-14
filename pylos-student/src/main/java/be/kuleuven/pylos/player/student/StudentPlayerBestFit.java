@@ -43,6 +43,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
     public void doMove(PylosGameIF game, PylosBoard board) {
         currentGame = game;
         currentBoard = board;
+        simulator = new PylosGameSimulator(currentGame.getState(), PLAYER_COLOR, currentBoard);
         final List<PylosLocation> allPossibleLocations = getAllPossibleLocations();
         Collections.shuffle(allPossibleLocations);
         if (makeSquare(this, allPossibleLocations)) return;
@@ -52,7 +53,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
     // First call to miniMax, this method will save the best found move
     public void miniMax() {
-        simulator = new PylosGameSimulator(currentGame.getState(), PLAYER_COLOR, currentBoard);
         PylosGameState prevState = simulator.getState();
         PylosSphere bestSphere = null;
         PylosLocation bestLocation = null;
@@ -147,16 +147,29 @@ public class StudentPlayerBestFit extends PylosPlayer {
      * @return successfully made/blocked square or not
      */
     private boolean makeSquare(PylosPlayer player, List<PylosLocation> allPossibleLocations) {
-        final List<PylosLocation> fullSquareLocations =
-                getSquareLocations(allPossibleLocations, player);
+        final List<PylosLocation> fullSquareLocations = getSquareLocations(allPossibleLocations, player);
         if (!fullSquareLocations.isEmpty()) {
-            PylosLocation fullSquareLocation =
-                    fullSquareLocations.get((int) (Math.random() * fullSquareLocations.size()));
-            // Try to move sphere that is already on board
-            PylosSphere sphere = getMovableSphereToLocation(fullSquareLocation);
-            // Use reserve sphere
-            if (sphere == null) sphere = currentBoard.getReserve(this);
-            currentGame.moveSphere(sphere, fullSquareLocation);
+            // Get best full square location by minimax
+            PylosLocation bestFullSquareLocation = null;
+            PylosSphere bestSphere = null;
+            double bestScore = -9999;
+            for (PylosLocation fullSquareLocation : fullSquareLocations) {
+                List<PylosSphere> movableSpheresToLocation = getMovableSpheresToLocation(fullSquareLocation);
+                movableSpheresToLocation.add(currentBoard.getReserve(this)); // add reserve sphere
+                for (PylosSphere sphere: movableSpheresToLocation) {
+                    PylosLocation prevLocation = sphere.getLocation();
+                    simulator.moveSphere(sphere, fullSquareLocation);
+                    double result = miniMaxRec();
+                    if (prevLocation == null) simulator.undoAddSphere(sphere, PylosGameState.MOVE, PLAYER_COLOR);
+                    else simulator.undoMoveSphere(sphere, prevLocation, PylosGameState.MOVE, PLAYER_COLOR);
+                    if (result > bestScore) {
+                        bestScore = result;
+                        bestFullSquareLocation = fullSquareLocation;
+                        bestSphere = sphere;
+                    }
+                }
+            }
+            currentGame.moveSphere(bestSphere, bestFullSquareLocation);
             return true;
         }
         return false;
@@ -291,6 +304,19 @@ public class StudentPlayerBestFit extends PylosPlayer {
             if (!ps.isReserve() && ps.canMoveTo(location)) return ps;
         }
         return null;
+    }
+
+    /**
+     * @param location
+     * @return sphere on board that can be moved to location or null
+     */
+    private List<PylosSphere> getMovableSpheresToLocation(PylosLocation location) {
+        List<PylosSphere> movableSpheresToLocation = new ArrayList<>();
+        for (PylosSphere ps : currentBoard.getSpheres(this)) {
+            if (!ps.isReserve() && ps.canMoveTo(location))
+                movableSpheresToLocation.add(ps);
+        }
+        return movableSpheresToLocation;
     }
 
     @Override
