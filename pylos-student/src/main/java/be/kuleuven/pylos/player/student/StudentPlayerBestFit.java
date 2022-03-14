@@ -35,6 +35,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
     private PylosGameIF currentGame;
     private PylosBoard currentBoard;
     private PylosGameSimulator simulator;
+    private final int NUMBER_OF_SPHERES = 15;
     private final int DEPTH = 2;
     private int currentDepth = 0;
 
@@ -46,7 +47,6 @@ public class StudentPlayerBestFit extends PylosPlayer {
         Collections.shuffle(allPossibleLocations);
         if (makeSquare(this, allPossibleLocations)) return;
         else if (makeSquare(this.OTHER, allPossibleLocations)) return;
-        else if (doLevelUp(allPossibleLocations)) return;
         miniMax();
     }
 
@@ -221,11 +221,11 @@ public class StudentPlayerBestFit extends PylosPlayer {
 
     // Emphasizes preserving the spheres of our player
     private double eval() {
-        double reserveScore = (-30 * (15 - currentBoard.getReservesSize(this))) + (10 * (15 - currentBoard.getReservesSize(this.OTHER)));
+        double reserveScore = (-30 * (NUMBER_OF_SPHERES - currentBoard.getReservesSize(this))) + (10 * (NUMBER_OF_SPHERES - currentBoard.getReservesSize(this.OTHER)));
         double moveScore = 0;
         List<PylosLocation> allPossibleLocations = getAllPossibleLocations();
-        moveScore += getMakeSquaresSimulator(this, allPossibleLocations);
-        moveScore += doLevelUpSimulator(allPossibleLocations);
+        moveScore += (10 * getMakeSquaresSimulator(this, allPossibleLocations));
+        moveScore += (doLevelUpSimulator(allPossibleLocations));
         return reserveScore + moveScore;
     }
 
