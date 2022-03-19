@@ -251,6 +251,7 @@ public class StudentPlayerBestFit extends PylosPlayer {
     List<PylosLocation> allPossibleLocations = getAllPossibleLocations();
     moveScore += (10 * getMakeSquaresSimulator(this, allPossibleLocations));
     moveScore += (doLevelUpSimulator(allPossibleLocations));
+    moveScore += (10 * (getBlockedSpheres(OTHER) - getBlockedSpheres(this)));
     return reserveScore + moveScore;
   }
 
@@ -291,12 +292,23 @@ public class StudentPlayerBestFit extends PylosPlayer {
     return count;
   }
 
+  // Returns nr of spheres on board which can not be moved (they're blocking squares or have
+  // spheres on top of them)
+  private int getBlockedSpheres(PylosPlayer player) {
+    int blocked = 0;
+    for (PylosSphere sphere : currentBoard.getSpheres(player)) {
+      if (sphere.getLocation() != null && !sphere.canMove())
+        blocked++;
+    }
+    return blocked;
+  }
+
 
   /**
-   * @deprecated
    * @param removableSpheres
    * @return sphere that doesn't give opponent opportunity to make square and doesn't break our
    * opportunity to create square
+   * @deprecated
    */
   private PylosSphere getOptimalRemovableSphere(List<PylosSphere> removableSpheres) {
     for (PylosSphere ps : removableSpheres) {
