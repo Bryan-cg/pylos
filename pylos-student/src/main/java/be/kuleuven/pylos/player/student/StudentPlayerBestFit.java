@@ -297,8 +297,17 @@ public class StudentPlayerBestFit extends PylosPlayer {
   private int getBlockedSpheres(PylosPlayer player) {
     int blocked = 0;
     for (PylosSphere sphere : currentBoard.getSpheres(player)) {
-      if (sphere.getLocation() != null && !sphere.canMove())
-        blocked++;
+      if (sphere.getLocation() != null) {
+        if (!sphere.canMove()) blocked++;
+        else {
+          for (PylosSquare square : sphere.getLocation().getSquares()) {
+            if (square.getInSquare(player.OTHER) == 3) {
+              blocked++;
+              break;
+            }
+          }
+        }
+      }
     }
     return blocked;
   }
